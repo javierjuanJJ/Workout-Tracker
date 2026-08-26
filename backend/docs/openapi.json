@@ -1,0 +1,478 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Workout Tracker API",
+    "description": "API REST para gestionar usuarios, rutinas de entrenamiento, agenda y reportes de progreso.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "http://localhost:3000/api", "description": "Desarrollo local" }
+  ],
+  "tags": [
+    { "name": "Health", "description": "Comprobación de estado" },
+    { "name": "Auth", "description": "Registro y autenticación" },
+    { "name": "Workouts", "description": "Gestión de rutinas" },
+    { "name": "Reports", "description": "Reportes de progreso" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "EnvelopeError": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "error": { "type": "string" },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": { "type": "string" },
+                "message": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "SignupRequest": {
+        "type": "object",
+        "required": ["name", "email", "password"],
+        "properties": {
+          "name": { "type": "string", "minLength": 2, "maxLength": 80 },
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 8, "maxLength": 72 }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string" }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "token": { "type": "string" },
+          "tokenType": { "type": "string", "example": "Bearer" },
+          "expiresIn": { "type": "string", "example": "1h" },
+          "user": { "$ref": "#/components/schemas/User" }
+        }
+      },
+      "ExerciseItemInput": {
+        "type": "object",
+        "required": ["exerciseId", "sets", "reps"],
+        "properties": {
+          "exerciseId": { "type": "integer", "minimum": 1 },
+          "sets": { "type": "integer", "minimum": 1, "maximum": 50 },
+          "reps": { "type": "integer", "minimum": 1, "maximum": 500 },
+          "weight": { "type": "number", "minimum": 0, "maximum": 1000, "default": 0 }
+        }
+      },
+      "CreateWorkoutRequest": {
+        "type": "object",
+        "required": ["title", "exercises"],
+        "properties": {
+          "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "notes": { "type": "string", "maxLength": 1000 },
+          "status": { "type": "string", "enum": ["planned", "completed", "cancelled"], "default": "planned" },
+          "scheduledAt": { "type": "string", "format": "date-time" },
+          "exercises": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 30,
+            "items": { "$ref": "#/components/schemas/ExerciseItemInput" }
+          }
+        }
+      },
+      "UpdateWorkoutRequest": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "notes": { "type": "string", "maxLength": 1000 },
+          "comment": { "type": "string", "maxLength": 1000 },
+          "status": { "type": "string", "enum": ["planned", "completed", "cancelled"] },
+          "scheduledAt": { "type": "string", "format": "date-time" },
+          "exercises": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 30,
+            "items": { "$ref": "#/components/schemas/ExerciseItemInput" }
+          }
+        }
+      },
+      "ExerciseItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "exerciseId": { "type": "integer" },
+          "sets": { "type": "integer" },
+          "reps": { "type": "integer" },
+          "weight": { "type": "number" },
+          "position": { "type": "integer" },
+          "exercise": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer" },
+              "name": { "type": "string" },
+              "muscleGroup": { "type": "string" },
+              "category": { "type": "string" }
+            }
+          }
+        }
+      },
+      "Workout": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "userId": { "type": "integer" },
+          "title": { "type": "string" },
+          "status": { "type": "string", "enum": ["planned", "completed", "cancelled"] },
+          "comment": { "type": "string", "nullable": true },
+          "notes": { "type": "string", "nullable": true },
+          "scheduledAt": { "type": "string", "format": "date-time", "nullable": true },
+          "completedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "workoutExercises": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ExerciseItem" }
+          }
+        }
+      },
+      "ScheduleRequest": {
+        "type": "object",
+        "required": ["scheduledAt"],
+        "properties": {
+          "scheduledAt": { "type": "string", "format": "date-time", "example": "2026-09-01T18:30:00Z" }
+        }
+      },
+      "ReportSummary": {
+        "type": "object",
+        "properties": {
+          "totalCompletedWorkouts": { "type": "integer" },
+          "totalVolumeKg": { "type": "number" },
+          "totalSets": { "type": "integer" },
+          "totalReps": { "type": "integer" },
+          "averageVolumePerSession": { "type": "number" },
+          "byMuscleGroup": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "muscleGroup": { "type": "string" },
+                "sessions": { "type": "integer" },
+                "sets": { "type": "integer" },
+                "volumeKg": { "type": "number" }
+              }
+            }
+          },
+          "recentSessions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "title": { "type": "string" },
+                "completedAt": { "type": "string", "format": "date-time", "nullable": true },
+                "volumeKg": { "type": "number" }
+              }
+            }
+          },
+          "lastCompletedAt": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Datos de entrada inválidos",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" } } }
+      },
+      "Unauthorized": {
+        "description": "Token ausente, inválido o expirado",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" } } }
+      },
+      "NotFound": {
+        "description": "Recurso no encontrado o ajeno al usuario",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" } } }
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Estado del servicio",
+        "responses": {
+          "200": {
+            "description": "Servicio operativo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "object",
+                      "properties": { "status": { "type": "string" }, "env": { "type": "string" } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/signup": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Registro de usuario",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SignupRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuario creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": {
+            "description": "Email ya registrado",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" } } }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Inicio de sesión con emisión de JWT",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Token emitido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": { "$ref": "#/components/schemas/LoginResponse" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": {
+            "description": "Credenciales inválidas",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" } } }
+          }
+        }
+      }
+    },
+    "/workouts": {
+      "post": {
+        "tags": ["Workouts"],
+        "summary": "Crear rutina con ejercicios anidados",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateWorkoutRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Rutina creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": { "$ref": "#/components/schemas/Workout" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "get": {
+        "tags": ["Workouts"],
+        "summary": "Listar rutinas del usuario con filtros",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["planned", "completed", "cancelled"] }
+          },
+          { "name": "from", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "to", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["date_asc", "date_desc"], "default": "date_desc" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado filtrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Workout" } },
+                    "meta": {
+                      "type": "object",
+                      "properties": { "count": { "type": "integer" } }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/workouts/{id}": {
+      "patch": {
+        "tags": ["Workouts"],
+        "summary": "Actualización parcial (título, estado, comentario, ejercicios)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateWorkoutRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Rutina actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": { "$ref": "#/components/schemas/Workout" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Workouts"],
+        "summary": "Eliminar rutina propia",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } }
+        ],
+        "responses": {
+          "204": { "description": "Rutina eliminada" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/workouts/{id}/schedule": {
+      "post": {
+        "tags": ["Workouts"],
+        "summary": "Programar rutina en fecha/hora concreta",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ScheduleRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Rutina programada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": { "$ref": "#/components/schemas/Workout" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/reports/progress": {
+      "get": {
+        "tags": ["Reports"],
+        "summary": "Métricas de progreso sobre entrenamientos completados",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Resumen de progreso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": { "$ref": "#/components/schemas/ReportSummary" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    }
+  }
+}
