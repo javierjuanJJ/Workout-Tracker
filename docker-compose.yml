@@ -1,8 +1,6 @@
 services:
   api:
-    build:
-      context: ./backend
-    image: workout-tracker-api
+    image: jjal20021998/workout-tracker:latest
     container_name: workout-tracker-api
     ports:
       - "${API_PORT:-3000}:3000"
