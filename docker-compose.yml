@@ -1,0 +1,49 @@
+services:
+  api:
+    build:
+      context: ./backend
+    image: workout-tracker-api
+    container_name: workout-tracker-api
+    ports:
+      - "${API_PORT:-3000}:3000"
+    # Secrets/config desde backend/.env (si existe). DATABASE_URL y PORT se
+    # fuerzan abajo para apuntar a los servicios de este compose.
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-workout}:${POSTGRES_PASSWORD:-workout}@db:5432/${POSTGRES_DB:-workout_tracker}?schema=public
+      # NODE_ENV debe quedar sin definir (app.js no hace listen si está seteado)
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  db:
+    image: postgres:16-alpine
+    container_name: workout-tracker-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-workout}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-workout}
+      POSTGRES_DB: ${POSTGRES_DB:-workout_tracker}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-workout} -d ${POSTGRES_DB:-workout_tracker}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  pg-data:

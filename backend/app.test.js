@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { before, after, describe, it } from 'node:test';
 
 process.env.NODE_ENV = 'test';
-process.env.DATABASE_URL ??= 'file:./test.db';
+process.env.DATABASE_URL ??= 'postgresql://workout:workout@localhost:5432/workout_tracker?schema=public';
 process.env.JWT_SECRET ??= 'test-secret-workout-tracker';
 
 const { default: app } = await import('./app.js');
