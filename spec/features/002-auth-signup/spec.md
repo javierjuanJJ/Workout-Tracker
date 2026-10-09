@@ -29,7 +29,7 @@ Como visitante, quiero registrarme con nombre, email y contraseña para crear un
 ### No funcionales
 - NFR-1: Email normalizado a minúsculas y trimmed.
 - NFR-2: Password mínimo 8, máximo 72 (límite de bcrypt).
-- NFR-3: `app.js` sin funciones `async`, sin `.run()`, listen condicionado a `!process.env.NODE_ENV`, export default app.
+- NFR-3: `app.js` sin funciones `async`, sin `.run()`, listen condicionado a `config.env !== 'test'`, export default app.
 
 ## Contrato de API
 

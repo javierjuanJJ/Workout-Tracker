@@ -34,7 +34,7 @@ async function progressSummary(userId) {
       const volume = we.sets * we.reps * we.weight;
       totalVolume += volume;
       totalSets += we.sets;
-      totalReps += we.reps;
+      totalReps += we.sets * we.reps;
 
       const key = we.exercise.muscleGroup;
       const current = byMuscleGroup.get(key) ?? { sessions: new Set(), sets: 0, volume: 0 };

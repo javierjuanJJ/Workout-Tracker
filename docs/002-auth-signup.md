@@ -4,7 +4,7 @@
 
 Primer slice HTTP del proyecto; monta la aplicación Express completa.
 
-- **`app.js`**: instancia Express con `cors()`, `express.json()`, healthcheck `GET /health`, router `/api` y manejadores de error globales. Cumple la regla estricta: sin funciones `async`, sin `.run()`; el listen queda condicionado a `if (!process.env.NODE_ENV)` y exporta `default app`. En tests (`NODE_ENV=test`) el módulo no abre puerto.
+- **`app.js`**: instancia Express con `cors()`, `express.json()`, healthcheck `GET /health`, router `/api` y manejadores de error globales. Cumple la regla estricta: sin funciones `async`, sin `.run()`; el listen queda condicionado a `if (config.env !== 'test')` y exporta `default app`. En tests (`NODE_ENV=test`) el módulo no abre puerto.
 - **`middlewares/validate.middleware.js`**: fábrica `validate(schema, source)` que aplica `schema.safeParse(req[source])`; ante fallo responde 400 con `{ success:false, error, issues[] }`; ante éxito sustituye `req.body` por los datos transformados (trim/lowercase) o guarda en `req.validatedQuery` / `req.validatedParams`.
 - **`schemas/auth.schema.js`**: `signupSchema` con Zod (`name` 2–80, `email` normalizado, `password` 8–72 por límite de bcrypt).
 - **`models/user.model.js`**: acceso a datos (`create`, `findByEmail`, `findById`).

@@ -17,7 +17,7 @@
 ## Decisiones arquitectónicas
 
 1. **ESM** ("type": "module") en todo el proyecto.
-2. **Arranque condicional**: `app.js` NO contiene funciones `async` ni usa `.run()`. El listen está condicionado: `if (!process.env.NODE_ENV) { app.listen(...) }`. Exporta `default app`.
+2. **Arranque condicional**: `app.js` NO contiene funciones `async` ni usa `.run()`. El listen está condicionado: `if (config.env !== 'test') { app.listen(...) }`. Exporta `default app`.
 3. **Estructura interna obligatoria**:
 
 ```text

@@ -18,7 +18,7 @@ app.use('/api', apiRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-if (!process.env.NODE_ENV) {
+if (config.env !== 'test') {
   app.listen(config.port, () => {
     console.log(`Workout Tracker API escuchando en http://localhost:${config.port}`);
   });

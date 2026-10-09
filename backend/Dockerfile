@@ -16,7 +16,7 @@ COPY . .
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV PORT=3000
-# NODE_ENV NO se define a propósito: app.js solo hace listen si !NODE_ENV
+# app.js hace listen salvo con NODE_ENV=test (los tests levantan su propio puerto)
 COPY --from=build --chown=node:node /app ./
 USER node
 EXPOSE 3000
